@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import {
     StyleSheet,
     View,
-    Text
+    Text,
+    ToastAndroid
 } from 'react-native';
 import {
     RTCPeerConnection,
@@ -14,7 +15,7 @@ import {
     getUserMedia
 } from 'react-native-webrtc';
 
-// Some constants
+// Default Peer Connection configuration
 const CONFIG = { "iceServers": [ { "url": "stun:stun.l.google.com:19302" } ] };
 
 // Main Peer Connection
@@ -22,10 +23,16 @@ const PC = new RTCPeerConnection(CONFIG);
 
 // Component style
 const styles = StyleSheet.create({
+    appContainer: {
+        flex: 1
+    },
     defaultRTCView: {
-        width:            300,
-        height:           250,
-        backgroundColor:  'red'
+        // width:            300,
+        // height:           250,
+        flex:               1,
+        justifyContent:     'flex-end',
+        alignItems:         'center',
+        backgroundColor:    '#FAFAFA'
     }
 });
 
@@ -34,33 +41,29 @@ export default class App extends Component {
         super(props);
 
         this.state = {
-            streamURL: null
+            stream:     null,
+            streamURL:  null
         };
 
         MediaStreamTrack.getSources(sourcesInfos => {
-            let videoSourceId = null;
+            const videoSourceList = sourcesInfos.filter(sourceInfo => {
+                return sourceInfo.kind == 'video' && sourceInfo.facing == 'front';
+            });
 
-            for (let sourceInfo of sourcesInfos) {
-
-                if (sourceInfo.kind == 'video' && sourceInfo.facing == 'front') {
-                    videoSourceId = sourceInfo.id;
-
-                    break;
-                }
-            }
-
-            if (videoSourceId === null) {
-                console.log('videoSourceId empty');
+            if (videoSourceList.length === 0) {
+                alertProblem('No video available in device');
             } else {
+                // Get the first available video source id
+                const videoSourceId = videoSourceList[0].id;
+
                 const successHandler = (stream) => {
                     PC.addStream(stream);
 
                     this.setState({ streamURL: stream.toURL() });
+                    this.setState({ stream: stream });
                 };
 
-                const errorHandler = (error) => {
-                    console.log('Error using user media', error);
-                };
+                const errorHandler = (error) => alertProblem('Error using user media', error);
 
                 const userMediaConfig = {
                     audio: true,
@@ -78,7 +81,7 @@ export default class App extends Component {
 
     render() {
         return (
-            <View>
+            <View style={styles.appContainer}>
                 <RTCView streamURL={this.state.streamURL} style={styles.defaultRTCView} />
                 <Text>
                     Lixo seco {this.state.streamURL}
@@ -86,4 +89,14 @@ export default class App extends Component {
             </View>
         );
     }
+}
+
+// Utils functions
+
+function alertProblem(...messages) {
+    const msg = messages.join(' ');
+
+    console.log(msg);
+
+    ToastAndroid.show(msg, ToastAndroid.SHORT);
 }
