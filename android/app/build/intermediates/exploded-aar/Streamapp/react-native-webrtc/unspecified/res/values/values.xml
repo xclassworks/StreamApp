@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- From: file:/home/matheus/Documents/Fiap/4º%20ECR/Bmate/Streamapp/node_modules/react-native-webrtc/android/src/main/res/values/styles.xml -->
-    <eat-comment/>
-    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
-        <!-- Customize your theme here. -->
-    </style>
-</resources>
