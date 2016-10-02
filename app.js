@@ -14,6 +14,10 @@ import {
     MediaStreamTrack,
     getUserMedia
 } from 'react-native-webrtc';
+import Socket from 'react-native-socketio';
+
+// Connection with the socket server
+const socket = new Socket('192.168.1.45:8583', { path: '/socket' });
 
 // Default Peer Connection configuration
 const CONFIG = { "iceServers": [ { "url": "stun:stun.l.google.com:19302" } ] };
@@ -21,18 +25,23 @@ const CONFIG = { "iceServers": [ { "url": "stun:stun.l.google.com:19302" } ] };
 // Main Peer Connection
 const PC = new RTCPeerConnection(CONFIG);
 
+// Peer Connection events
+PC.onicecandidate = (event) => console.log('onicecandidate event', event.candidate);
+
+PC.oniceconnectionstatechange = (event) => console.log('oniceconnectionstatechange', event.target.iceConnectionState);
+
+PC.onsignalingstatechange = (event) => console.log('onsignalingstatechange', event.target.signalingState);
+
+PC.onaddstream = (event) => console.log('onaddstream', event.stream);
+
+PC.onremovestream = (event) => console.log('onremovestream', event.stream);
+
 // Component style
 const styles = StyleSheet.create({
-    appContainer: {
-        flex: 1
-    },
     defaultRTCView: {
-        // width:            300,
-        // height:           250,
-        flex:               1,
-        justifyContent:     'flex-end',
-        alignItems:         'center',
-        backgroundColor:    '#FAFAFA'
+        width:              300,
+        height:             300,
+        backgroundColor:    'red'
     }
 });
 
@@ -81,11 +90,8 @@ export default class App extends Component {
 
     render() {
         return (
-            <View style={styles.appContainer}>
+            <View>
                 <RTCView streamURL={this.state.streamURL} style={styles.defaultRTCView} />
-                <Text>
-                    Lixo seco {this.state.streamURL}
-                </Text>
             </View>
         );
     }
