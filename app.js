@@ -16,19 +16,31 @@ import {
 } from 'react-native-webrtc';
 import Socket from 'react-native-socketio';
 
-// Connection with the socket server
-const socket = new Socket('192.168.1.45:8583', { path: '/socket' });
+// Socket server config
+const SOCKET_CONFIG = {
+    IP_ADDRESS: "192.168.1.45",
+    PORT: 8989
+};
 
-// Default Peer Connection configuration
-const CONFIG = { "iceServers": [ { "url": "stun:stun.l.google.com:19302" } ] };
+// Bmate configurations
+import CONFIGS from './configs.json';
+
+console.log(CONFIGS);
+
+// Connection with the socket server
+const socket = new Socket(`http://${CONFIGS.socketServer.ipAddress}:${CONFIGS.socketServer.port}`,
+                            { path: '/socket' });
 
 // Main Peer Connection
-const PC = new RTCPeerConnection(CONFIG);
+const PC = new RTCPeerConnection(CONFIGS.webRTC);
 
 // Peer Connection events
-PC.onicecandidate = (event) => console.log('onicecandidate event', event.candidate);
+PC.onicecandidate = (event) => {
+    console.log('onicecandidate event', event.candidate);
+};
 
-PC.oniceconnectionstatechange = (event) => console.log('oniceconnectionstatechange', event.target.iceConnectionState);
+PC.oniceconnectionstatechange = (event) => console.log('oniceconnectionstatechange',
+                                                        event.target.iceConnectionState);
 
 PC.onsignalingstatechange = (event) => console.log('onsignalingstatechange', event.target.signalingState);
 
@@ -70,6 +82,30 @@ export default class App extends Component {
 
                     this.setState({ streamURL: stream.toURL() });
                     this.setState({ stream: stream });
+
+                    socket.on('connect', () => {
+                        console.log('Socket connected');
+
+                        socket.emit('robotregister', { nickName: 'UmaUmaUmaE' });
+
+                        socket.on('robotregister:success', (robot) => {
+                            console.log('robotregister:success', robot);
+
+                            socket.on('robotstream:error', (err) => {
+                                alertProblem(err.toString);
+                            });
+
+                            socket.on('robotmove', (moveInstructions) => {
+                                console.log('robot move', moveInstructions);
+                            });
+
+                            socket.on('robotstop', (moveInstruction) => {
+                                console.log('robotstop. command', moveInstruction);
+                            });
+                        });
+                    });
+
+                    socket.connect();
                 };
 
                 const errorHandler = (error) => alertProblem('Error using user media', error);
@@ -90,9 +126,7 @@ export default class App extends Component {
 
     render() {
         return (
-            <View>
-                <RTCView streamURL={this.state.streamURL} style={styles.defaultRTCView} />
-            </View>
+            <RTCView streamURL={this.state.streamURL} style={styles.defaultRTCView} />
         );
     }
 }
@@ -105,4 +139,13 @@ function alertProblem(...messages) {
     console.log(msg);
 
     ToastAndroid.show(msg, ToastAndroid.SHORT);
+}
+
+function exchange(data, mainPeerConn) {
+
+    if (data.sdp) {
+        // TODO
+    } else {
+        mainPeerConn.addIceCandidate(new RTCIceCandidate(data.candidate));
+    }
 }
