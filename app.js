@@ -23,9 +23,7 @@ const SOCKET_CONFIG = {
 };
 
 // Bmate configurations
-import CONFIGS from './configs.json';
-
-console.log(CONFIGS);
+import CONFIGS from './bconfig/configs.json';
 
 // Connection with the socket server
 const socket = new Socket(`http://${CONFIGS.socketServer.ipAddress}:${CONFIGS.socketServer.port}`,

@@ -1,0 +1,3 @@
+[submodule "bconfig"]
+	path = bconfig
+	url = https://github.com/xclassworks/bconfig.git
