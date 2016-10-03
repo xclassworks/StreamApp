@@ -34,7 +34,10 @@ const PC = new RTCPeerConnection(CONFIGS.webRTC);
 
 // Peer Connection events
 PC.onicecandidate = (event) => {
-    console.log('onicecandidate event', event.candidate);
+
+    if (event.candidate) {
+        socket.emit('signalingMessage', { type: 'candidate', candidate: event.candidate });
+    }
 };
 
 PC.oniceconnectionstatechange = (event) => console.log('oniceconnectionstatechange',
@@ -100,13 +103,33 @@ export default class App extends Component {
                             socket.on('robotstop', (moveInstruction) => {
                                 console.log('robotstop. command', moveInstruction);
                             });
+
+                            socket.on('signalingMessage', (message) => {
+                                const msg = message[0];
+
+                                switch (msg.type) {
+                                    case 'offer':
+                                        setRemoteDescription(msg.desc);
+                                        break;
+                                    case 'candidate':
+                                        const candidate = new RTCIceCandidate(msg.candidate);
+
+                                        PC.addIceCandidate(candidate,
+                                            () => console.log('Ice candidate added with success', candidate),
+                                            (err) => console.log('Error adding ice candidate', err,
+                                                                candidate)
+                                        );
+                                        break;
+                                    case 'sendOffer':
+                                        createOffer();
+                                        break;
+                                }
+                            });
                         });
                     });
 
                     socket.connect();
                 };
-
-                const errorHandler = (error) => alertProblem('Error using user media', error);
 
                 const userMediaConfig = {
                     audio: true,
@@ -117,7 +140,7 @@ export default class App extends Component {
                     }
                 };
 
-                getUserMedia(userMediaConfig, successHandler, errorHandler);
+                getUserMedia(userMediaConfig, successHandler, generalErrorHandler);
             }
         });
     }
@@ -139,11 +162,33 @@ function alertProblem(...messages) {
     ToastAndroid.show(msg, ToastAndroid.SHORT);
 }
 
-function exchange(data, mainPeerConn) {
+function generalErrorHandler(error) {
+    alertProblem(error.toString());
+}
 
-    if (data.sdp) {
-        // TODO
-    } else {
-        mainPeerConn.addIceCandidate(new RTCIceCandidate(data.candidate));
+function createOffer() {
+    const onCreateOfferSuccess = (desc) => {
+
+        PC.setLocalDescription(desc, () => {
+            socket.emit('signalingMessage', { type: 'offer', desc: PC.localDescription });
+        }, generalErrorHandler);
     }
+
+    const offerConstraints = {
+        offerToReceiveAudio: 1,
+        offerToReceiveVideo: 1
+    };
+
+    PC.createOffer(onCreateOfferSuccess, generalErrorHandler, offerConstraints);
+}
+
+function setRemoteDescription(desc) {
+    const onRemoteDescriptionSuccess = () => {
+        console.log('Set remote description completed with success');
+    };
+
+    PC.setRemoteDescription(new RTCSessionDescription(desc),
+        onRemoteDescriptionSuccess,
+        generalErrorHandler
+    );
 }
